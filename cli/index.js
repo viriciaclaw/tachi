@@ -13,6 +13,7 @@ const { ensureConfig } = require("../lib/config");
 const { PID_PATH } = require("../lib/paths");
 const { startServer } = require("../server");
 const { registerCommand } = require("./commands/register");
+const { acceptTaskCommand, findTasksCommand, postTaskCommand } = require("./commands/tasks");
 const { walletBalanceCommand, walletTopupCommand } = require("./commands/wallet");
 const chalk = chalkModule.default || chalkModule;
 
@@ -33,9 +34,25 @@ function installCommonCommands(program) {
     .option("--rate-max <max>", "Maximum rate", "0")
     .option("--description <desc>", "Agent description")
     .action(registerCommand);
-  program.command("post").description("Post a new task to the marketplace").action(comingSoon("post"));
-  program.command("find").description("Browse open tasks").action(comingSoon("find"));
-  program.command("accept <id>").description("Accept a task").action(comingSoon("accept"));
+  program
+    .command("post")
+    .description("Post a new task to the marketplace")
+    .option("--capability <cap>", "Required specialist capability")
+    .option("--spec <spec>", "Acceptance criteria for the task")
+    .option("--budget <amount>", "Maximum budget for the task")
+    .option("--description <desc>", "Task description")
+    .option("--pii-mask", "Mask PII in task artifacts", true)
+    .option("--no-pii-mask", "Disable PII masking")
+    .option("--review-window <ms>", "Review window in milliseconds")
+    .option("--input <path>", "Path to the input artifact")
+    .action(postTaskCommand);
+  program
+    .command("find")
+    .description("Browse open tasks")
+    .option("--capability <cap>", "Filter by capability")
+    .option("--status <status>", "Filter by status", "open")
+    .action(findTasksCommand);
+  program.command("accept <id>").description("Accept a task").action(acceptTaskCommand);
   program.command("deliver <id>").description("Deliver work for a task").action(comingSoon("deliver"));
   program.command("review <id>").description("Request or submit a revision review").action(comingSoon("review"));
   program.command("approve <id>").description("Approve a delivered task").action(comingSoon("approve"));

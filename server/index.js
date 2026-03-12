@@ -9,6 +9,7 @@ const { hashApiKey } = require("../lib/hash");
 const { notImplemented } = require("../lib/notImplemented");
 const { PID_PATH, ensureTachiDir } = require("../lib/paths");
 const { createRegisterAgentHandler } = require("./routes/agents");
+const { createTasksHandlers } = require("./routes/tasks");
 const { createWalletBalanceHandler, createWalletTopupHandler } = require("./routes/wallet");
 
 function createAuthMiddleware(db) {
@@ -53,6 +54,7 @@ function createAuthMiddleware(db) {
 
 function createApp(db) {
   const app = express();
+  const tasksHandlers = createTasksHandlers(db);
 
   app.use(express.json());
   app.use(createAuthMiddleware(db));
@@ -64,9 +66,9 @@ function createApp(db) {
   app.post("/agents/register", createRegisterAgentHandler(db));
   app.get("/agents", notImplemented("GET /agents"));
   app.get("/agents/:id", notImplemented("GET /agents/:id"));
-  app.post("/tasks", notImplemented("POST /tasks"));
-  app.get("/tasks", notImplemented("GET /tasks"));
-  app.post("/tasks/:id/accept", notImplemented("POST /tasks/:id/accept"));
+  app.post("/tasks", tasksHandlers.postTask);
+  app.get("/tasks", tasksHandlers.findTasks);
+  app.post("/tasks/:id/accept", tasksHandlers.acceptTask);
   app.post("/tasks/:id/deliver", notImplemented("POST /tasks/:id/deliver"));
   app.get("/tasks/:id", notImplemented("GET /tasks/:id"));
   app.post("/tasks/:id/approve", notImplemented("POST /tasks/:id/approve"));
