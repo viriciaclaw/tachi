@@ -3,6 +3,7 @@ const os = require("os");
 const path = require("path");
 
 function createMockRequest(app, method, requestPath, headers = {}, body) {
+  const parsedUrl = new URL(requestPath, "http://localhost");
   const normalizedHeaders = Object.fromEntries(
     Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
   );
@@ -12,9 +13,11 @@ function createMockRequest(app, method, requestPath, headers = {}, body) {
   req.method = method.toUpperCase();
   req.url = requestPath;
   req.originalUrl = requestPath;
-  req.path = requestPath;
+  req.path = parsedUrl.pathname;
+  req.query = Object.fromEntries(parsedUrl.searchParams.entries());
   req.headers = normalizedHeaders;
   req.body = body;
+  req.params = {};
   req.header = (name) => normalizedHeaders[name.toLowerCase()];
   return req;
 }
@@ -78,10 +81,18 @@ async function simulateRequest(app, method, requestPath, options = {}) {
   const res = createMockResponse();
   const layers = app.router.stack;
   const authLayer = layers.find((layer) => layer.name === "authMiddleware");
-  const routeLayer = layers.find(
-    (layer) => layer.route && layer.match(requestPath) && layer.route.methods[method.toLowerCase()],
-  );
+  const routeLayer = layers.find((layer) => {
+    if (!layer.route || !layer.route.methods[method.toLowerCase()]) {
+      return false;
+    }
+
+    return layer.match(req.path);
+  });
   const notFoundLayer = layers[layers.length - 1];
+
+  if (routeLayer && routeLayer.params) {
+    req.params = routeLayer.params;
+  }
 
   await invokeHandler(authLayer.handle, req, res);
   if (res.finished) {
@@ -126,7 +137,7 @@ global.fetch = async function fetchShim(url, options = {}) {
     body = JSON.parse(body);
   }
 
-  const response = await simulateRequest(app, method, parsedUrl.pathname, {
+  const response = await simulateRequest(app, method, `${parsedUrl.pathname}${parsedUrl.search}`, {
     headers,
     body,
   });

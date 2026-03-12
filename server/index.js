@@ -68,6 +68,7 @@ function createApp(db) {
   app.get("/agents/:id", notImplemented("GET /agents/:id"));
   app.post("/tasks", tasksHandlers.postTask);
   app.get("/tasks", tasksHandlers.findTasks);
+  app.get("/tasks/mine", tasksHandlers.findMyTasks);
   app.post("/tasks/:id/accept", tasksHandlers.acceptTask);
   app.post("/tasks/:id/deliver", tasksHandlers.deliverTask);
   app.get("/tasks/:id", tasksHandlers.getTaskDetail);

@@ -311,6 +311,19 @@ function createTasksHandlers(db) {
     return res.status(200).json(tasks);
   }
 
+  function findMyTasks(req, res) {
+    const agentId = req.agent.id;
+    const status = getQueryValue(req, "status");
+    const tasks = db.prepare(`
+      SELECT * FROM tasks
+      WHERE (buyer_id = @agentId OR seller_id = @agentId)
+        AND (@status IS NULL OR status = @status)
+      ORDER BY created_at DESC, id DESC
+    `).all({ agentId, status: status || null });
+
+    return res.status(200).json(tasks.map(normalizeTask));
+  }
+
   function acceptTaskHandler(req, res) {
     const taskId = getTaskIdParam(req);
 
@@ -455,6 +468,7 @@ function createTasksHandlers(db) {
   return {
     postTask,
     findTasks,
+    findMyTasks,
     acceptTask: acceptTaskHandler,
     approveTask,
     deliverTask,

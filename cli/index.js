@@ -24,6 +24,7 @@ const {
   taskStatusCommand,
 } = require("./commands/tasks");
 const { walletBalanceCommand, walletTopupCommand } = require("./commands/wallet");
+const { watchCommand } = require("./commands/watch");
 const chalk = chalkModule.default || chalkModule;
 
 function comingSoon(commandName) {
@@ -79,7 +80,15 @@ function installCommonCommands(program) {
     .option("--pii-mask", "Enable PII masking", true)
     .option("--no-pii-mask", "Disable PII masking")
     .action(callCommand);
-  program.command("watch").description("Watch marketplace activity").action(comingSoon("watch"));
+  program
+    .command("watch")
+    .description("Watch marketplace for open tasks + auto-release timer")
+    .option("--capability <cap>", "Filter by capability")
+    .option("--auto-accept", "Auto-accept matching tasks", false)
+    .option("--no-auto-release", "Disable auto-release timer")
+    .option("--poll-interval <ms>", "Marketplace poll interval (ms)", "5000")
+    .option("--release-check-interval <ms>", "Release check interval (ms)", "1000")
+    .action(watchCommand);
   program.command("history").description("Show task history").action(comingSoon("history"));
   program.command("status <id>").description("Show task status").action(taskStatusCommand);
   program.command("agents").description("List agent profiles").action(comingSoon("agents"));
