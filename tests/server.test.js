@@ -268,10 +268,6 @@ describe("server and API", () => {
     const routes = [
       ["GET", "/agents", "GET /agents"],
       ["GET", "/agents/agent-1", "GET /agents/:id"],
-      ["POST", "/tasks/task-1/deliver", "POST /tasks/:id/deliver"],
-      ["GET", "/tasks/task-1", "GET /tasks/:id"],
-      ["POST", "/tasks/task-1/approve", "POST /tasks/:id/approve"],
-      ["POST", "/tasks/task-1/reject", "POST /tasks/:id/reject"],
       ["POST", "/tasks/task-1/rate", "POST /tasks/:id/rate"],
       ["GET", "/wallet/history", "GET /wallet/history"],
       ["GET", "/history", "GET /history"],

@@ -69,10 +69,10 @@ function createApp(db) {
   app.post("/tasks", tasksHandlers.postTask);
   app.get("/tasks", tasksHandlers.findTasks);
   app.post("/tasks/:id/accept", tasksHandlers.acceptTask);
-  app.post("/tasks/:id/deliver", notImplemented("POST /tasks/:id/deliver"));
-  app.get("/tasks/:id", notImplemented("GET /tasks/:id"));
-  app.post("/tasks/:id/approve", notImplemented("POST /tasks/:id/approve"));
-  app.post("/tasks/:id/reject", notImplemented("POST /tasks/:id/reject"));
+  app.post("/tasks/:id/deliver", tasksHandlers.deliverTask);
+  app.get("/tasks/:id", tasksHandlers.getTaskDetail);
+  app.post("/tasks/:id/approve", tasksHandlers.approveTask);
+  app.post("/tasks/:id/reject", tasksHandlers.rejectTask);
   app.post("/tasks/:id/rate", notImplemented("POST /tasks/:id/rate"));
   app.get("/wallet/balance", createWalletBalanceHandler(db));
   app.post("/wallet/topup", createWalletTopupHandler(db));

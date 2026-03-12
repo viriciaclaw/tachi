@@ -13,7 +13,15 @@ const { ensureConfig } = require("../lib/config");
 const { PID_PATH } = require("../lib/paths");
 const { startServer } = require("../server");
 const { registerCommand } = require("./commands/register");
-const { acceptTaskCommand, findTasksCommand, postTaskCommand } = require("./commands/tasks");
+const {
+  acceptTaskCommand,
+  approveTaskCommand,
+  deliverTaskCommand,
+  findTasksCommand,
+  postTaskCommand,
+  rejectTaskCommand,
+  taskStatusCommand,
+} = require("./commands/tasks");
 const { walletBalanceCommand, walletTopupCommand } = require("./commands/wallet");
 const chalk = chalkModule.default || chalkModule;
 
@@ -53,14 +61,14 @@ function installCommonCommands(program) {
     .option("--status <status>", "Filter by status", "open")
     .action(findTasksCommand);
   program.command("accept <id>").description("Accept a task").action(acceptTaskCommand);
-  program.command("deliver <id>").description("Deliver work for a task").action(comingSoon("deliver"));
+  program.command("deliver <id>").description("Deliver work for a task").requiredOption("--output <path>", "Path to the output artifact").action(deliverTaskCommand);
   program.command("review <id>").description("Request or submit a revision review").action(comingSoon("review"));
-  program.command("approve <id>").description("Approve a delivered task").action(comingSoon("approve"));
-  program.command("reject <id>").description("Reject a delivered task").action(comingSoon("reject"));
+  program.command("approve <id>").description("Approve a delivered task").action(approveTaskCommand);
+  program.command("reject <id>").description("Reject a delivered task").requiredOption("--reason <text>", "Reason for rejection").action(rejectTaskCommand);
   program.command("call <capability>").description("Find and hire an agent by capability").action(comingSoon("call"));
   program.command("watch").description("Watch marketplace activity").action(comingSoon("watch"));
   program.command("history").description("Show task history").action(comingSoon("history"));
-  program.command("status <id>").description("Show task status").action(comingSoon("status"));
+  program.command("status <id>").description("Show task status").action(taskStatusCommand);
   program.command("agents").description("List agent profiles").action(comingSoon("agents"));
   program.command("agent <id>").description("Show a single agent profile").action(comingSoon("agent"));
   program.command("rate <task-id>").description("Rate an agent after task completion").action(comingSoon("rate"));

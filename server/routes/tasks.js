@@ -60,8 +60,12 @@ function getTaskIdParam(req) {
   }
 
   const path = req.path || req.url || "";
-  const match = path.match(/^\/tasks\/([^/]+)\/accept$/);
+  const match = path.match(/^\/tasks\/([^/]+)/);
   return match ? match[1] : null;
+}
+
+function roundCurrency(amount) {
+  return Number(amount.toFixed(2));
 }
 
 function createTaskRow(taskId, agentId, body, createdAt) {
@@ -192,6 +196,51 @@ function createTasksHandlers(db) {
     return { task: findTaskById.get(taskId) };
   });
 
+  const releaseEscrowForApprovedTask = db.transaction((task, completedAt) => {
+    const totalHold = roundCurrency(Number(task.budget_max) * BUYER_SURCHARGE_MULTIPLIER);
+    const sellerPayout = roundCurrency(Number(task.agreed_price) * 0.93);
+    const platformFee = roundCurrency(Number(task.agreed_price) * 0.07);
+    const buyerRefund = roundCurrency(totalHold - Number(task.agreed_price));
+
+    db.prepare("UPDATE agents SET wallet_balance = wallet_balance + ? WHERE id = ?").run(sellerPayout, task.seller_id);
+    insertTransaction.run(uuidv4(), task.id, null, task.seller_id, sellerPayout, "escrow_release", completedAt);
+    insertTransaction.run(uuidv4(), task.id, null, null, platformFee, "platform_fee", completedAt);
+
+    if (buyerRefund > 0) {
+      db.prepare("UPDATE agents SET wallet_balance = wallet_balance + ? WHERE id = ?").run(buyerRefund, task.buyer_id);
+      insertTransaction.run(uuidv4(), task.id, null, task.buyer_id, buyerRefund, "escrow_refund", completedAt);
+    }
+
+    db.prepare(`
+      UPDATE tasks
+      SET status = 'approved', completed_at = ?
+      WHERE id = ?
+    `).run(completedAt, task.id);
+
+    return findTaskById.get(task.id);
+  });
+
+  const rejectDeliveredTask = db.transaction((task, reason) => {
+    const nextStatus = Number(task.revision_count) < 1 ? "revision" : "disputed";
+    const nextRevisionCount = Number(task.revision_count) < 1 ? Number(task.revision_count) + 1 : Number(task.revision_count);
+
+    db.prepare(`
+      UPDATE tasks
+      SET status = ?, rejection_reason = ?, revision_count = ?
+      WHERE id = ?
+    `).run(nextStatus, reason, nextRevisionCount, task.id);
+
+    if (nextStatus === "revision") {
+      const computeFee = roundCurrency(Number(task.agreed_price) * 0.25);
+      const createdAt = new Date().toISOString();
+
+      db.prepare("UPDATE agents SET wallet_balance = wallet_balance + ? WHERE id = ?").run(computeFee, task.seller_id);
+      insertTransaction.run(uuidv4(), task.id, null, task.seller_id, computeFee, "compute_fee", createdAt);
+    }
+
+    return findTaskById.get(task.id);
+  });
+
   function postTask(req, res) {
     const body = req.body ?? {};
     const capability = typeof body.capability === "string" ? body.capability.trim() : "";
@@ -302,10 +351,102 @@ function createTasksHandlers(db) {
     return res.status(200).json(normalizeTask(result.task));
   }
 
+  function deliverTask(req, res) {
+    const taskId = getTaskIdParam(req);
+    const outputPath = typeof req.body?.output_path === "string" ? req.body.output_path.trim() : "";
+
+    if (!outputPath) {
+      return res.status(400).json({ error: "Field 'output_path' is required" });
+    }
+
+    const task = findTaskById.get(taskId);
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    if (task.seller_id !== req.agent.id) {
+      return res.status(403).json({ error: "Only the seller can deliver this task" });
+    }
+
+    if (!["in-progress", "revision"].includes(task.status)) {
+      return res.status(409).json({ error: `Task ${task.id} is already ${task.status}` });
+    }
+
+    const deliveredAt = new Date().toISOString();
+    db.prepare(`
+      UPDATE tasks
+      SET output_path = ?, status = 'delivered', delivered_at = ?
+      WHERE id = ?
+    `).run(outputPath, deliveredAt, task.id);
+
+    return res.status(200).json(normalizeTask(findTaskById.get(task.id)));
+  }
+
+  function approveTask(req, res) {
+    const taskId = getTaskIdParam(req);
+    const task = findTaskById.get(taskId);
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    if (task.buyer_id !== req.agent.id) {
+      return res.status(403).json({ error: "Only the buyer can approve this task" });
+    }
+
+    if (task.status !== "delivered") {
+      return res.status(409).json({ error: `Task ${task.id} is already ${task.status}` });
+    }
+
+    const completedAt = new Date().toISOString();
+    const updatedTask = releaseEscrowForApprovedTask(task, completedAt);
+    return res.status(200).json(normalizeTask(updatedTask));
+  }
+
+  function rejectTask(req, res) {
+    const taskId = getTaskIdParam(req);
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+    const task = findTaskById.get(taskId);
+
+    if (!reason) {
+      return res.status(400).json({ error: "Field 'reason' is required" });
+    }
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    if (task.buyer_id !== req.agent.id) {
+      return res.status(403).json({ error: "Only the buyer can reject this task" });
+    }
+
+    if (task.status !== "delivered") {
+      return res.status(409).json({ error: `Task ${task.id} is already ${task.status}` });
+    }
+
+    return res.status(200).json(normalizeTask(rejectDeliveredTask(task, reason)));
+  }
+
+  function getTaskDetail(req, res) {
+    const taskId = getTaskIdParam(req);
+    const task = findTaskById.get(taskId);
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    return res.status(200).json(normalizeTask(task));
+  }
+
   return {
     postTask,
     findTasks,
     acceptTask: acceptTaskHandler,
+    approveTask,
+    deliverTask,
+    getTaskDetail,
+    rejectTask,
   };
 }
 

@@ -158,8 +158,153 @@ async function acceptTaskCommand(taskId) {
   }
 }
 
+async function deliverTaskCommand(taskId, options = {}) {
+  const config = ensureConfig();
+
+  if (!ensureRegistered(config)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${config.server_url}/tasks/${taskId}/deliver`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": config.api_key,
+      },
+      body: JSON.stringify({
+        output_path: options.output,
+      }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error(payload.error || `Task deliver failed with status ${response.status}`);
+      process.exitCode = 1;
+      return;
+    }
+
+    console.log(`Delivered task ${payload.id}. Status: delivered. Awaiting buyer review.`);
+  } catch (error) {
+    console.error(`Task deliver failed: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+async function approveTaskCommand(taskId) {
+  const config = ensureConfig();
+
+  if (!ensureRegistered(config)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${config.server_url}/tasks/${taskId}/approve`, {
+      method: "POST",
+      headers: {
+        "X-API-Key": config.api_key,
+      },
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error(payload.error || `Task approve failed with status ${response.status}`);
+      process.exitCode = 1;
+      return;
+    }
+
+    console.log(`Approved task ${payload.id}. Payment released to seller.`);
+  } catch (error) {
+    console.error(`Task approve failed: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+async function rejectTaskCommand(taskId, options = {}) {
+  const config = ensureConfig();
+
+  if (!ensureRegistered(config)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${config.server_url}/tasks/${taskId}/reject`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": config.api_key,
+      },
+      body: JSON.stringify({
+        reason: options.reason,
+      }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error(payload.error || `Task reject failed with status ${response.status}`);
+      process.exitCode = 1;
+      return;
+    }
+
+    console.log(`Rejected task ${payload.id}. Reason: ${payload.rejection_reason}`);
+  } catch (error) {
+    console.error(`Task reject failed: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+function printTaskDetail(task) {
+  console.log(`ID: ${task.id}`);
+  console.log(`Status: ${task.status}`);
+  console.log(`Capability: ${task.capability}`);
+  console.log(`Buyer: ${task.buyer_id}`);
+  console.log(`Seller: ${task.seller_id || "unassigned"}`);
+  console.log(`Budget: $${task.budget_max}`);
+  console.log(`Agreed Price: ${task.agreed_price === null ? "n/a" : `$${task.agreed_price}`}`);
+  console.log(`Created At: ${task.created_at || "n/a"}`);
+  console.log(`Accepted At: ${task.accepted_at || "n/a"}`);
+  console.log(`Delivered At: ${task.delivered_at || "n/a"}`);
+  console.log(`Completed At: ${task.completed_at || "n/a"}`);
+}
+
+async function taskStatusCommand(taskId) {
+  const config = ensureConfig();
+
+  if (!ensureRegistered(config)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${config.server_url}/tasks/${taskId}`, {
+      headers: {
+        "X-API-Key": config.api_key,
+      },
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error(payload.error || `Task status failed with status ${response.status}`);
+      process.exitCode = 1;
+      return;
+    }
+
+    printTaskDetail(payload);
+  } catch (error) {
+    console.error(`Task status failed: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
 module.exports = {
   acceptTaskCommand,
+  approveTaskCommand,
+  deliverTaskCommand,
   findTasksCommand,
   postTaskCommand,
+  rejectTaskCommand,
+  taskStatusCommand,
 };
