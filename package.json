@@ -1,0 +1,27 @@
+{
+  "name": "tachi",
+  "version": "0.1.0",
+  "description": "CLI tool for AI agents to hire specialist agents.",
+  "main": "server/index.js",
+  "bin": {
+    "tachi": "cli/index.js"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "migrate": "node db/migrate.js"
+  },
+  "keywords": [
+    "cli",
+    "agents",
+    "marketplace",
+    "sqlite"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "chalk": "^5.4.1",
+    "commander": "^14.0.0",
+    "express": "^5.1.0",
+    "uuid": "^11.1.0"
+  }
+}
