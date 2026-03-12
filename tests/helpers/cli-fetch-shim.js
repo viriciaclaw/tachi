@@ -113,6 +113,9 @@ runMigrations();
 const db = openDatabase();
 const app = createApp(db);
 
+global.__tachiTestDb = db;
+global.__tachiTestApp = app;
+
 global.fetch = async function fetchShim(url, options = {}) {
   const parsedUrl = new URL(url);
   const method = (options.method || "GET").toUpperCase();
@@ -138,6 +141,8 @@ global.fetch = async function fetchShim(url, options = {}) {
 };
 
 process.on("exit", () => {
+  delete global.__tachiTestDb;
+  delete global.__tachiTestApp;
   db.close();
   fs.rmSync(serverHome, { recursive: true, force: true });
 });

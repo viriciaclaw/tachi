@@ -13,6 +13,7 @@ const { ensureConfig } = require("../lib/config");
 const { PID_PATH } = require("../lib/paths");
 const { startServer } = require("../server");
 const { registerCommand } = require("./commands/register");
+const { callCommand } = require("./commands/call");
 const {
   acceptTaskCommand,
   approveTaskCommand,
@@ -65,7 +66,19 @@ function installCommonCommands(program) {
   program.command("review <id>").description("Request or submit a revision review").action(comingSoon("review"));
   program.command("approve <id>").description("Approve a delivered task").action(approveTaskCommand);
   program.command("reject <id>").description("Reject a delivered task").requiredOption("--reason <text>", "Reason for rejection").action(rejectTaskCommand);
-  program.command("call <capability>").description("Find and hire an agent by capability").action(comingSoon("call"));
+  program
+    .command("call <capability>")
+    .description("Post task, wait for specialist, get delivery — all in one")
+    .requiredOption("--spec <spec>", "Acceptance criteria")
+    .requiredOption("--budget <amount>", "Maximum budget")
+    .option("--timeout <ms>", "Max wait for specialist accept (ms)", "60000")
+    .option("--delivery-timeout <ms>", "Max wait for delivery (ms)", "7200000")
+    .option("--auto-approve", "Auto-approve on delivery", false)
+    .option("--description <desc>", "Task description")
+    .option("--input <path>", "Input artifact path")
+    .option("--pii-mask", "Enable PII masking", true)
+    .option("--no-pii-mask", "Disable PII masking")
+    .action(callCommand);
   program.command("watch").description("Watch marketplace activity").action(comingSoon("watch"));
   program.command("history").description("Show task history").action(comingSoon("history"));
   program.command("status <id>").description("Show task status").action(taskStatusCommand);
