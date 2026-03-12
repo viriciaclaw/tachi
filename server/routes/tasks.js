@@ -234,8 +234,10 @@ function createTasksHandlers(db) {
       const computeFee = roundCurrency(Number(task.agreed_price) * 0.25);
       const createdAt = new Date().toISOString();
 
+      // Deduct compute fee from buyer's wallet (anti-griefing cost)
+      db.prepare("UPDATE agents SET wallet_balance = wallet_balance - ? WHERE id = ?").run(computeFee, task.buyer_id);
       db.prepare("UPDATE agents SET wallet_balance = wallet_balance + ? WHERE id = ?").run(computeFee, task.seller_id);
-      insertTransaction.run(uuidv4(), task.id, null, task.seller_id, computeFee, "compute_fee", createdAt);
+      insertTransaction.run(uuidv4(), task.id, task.buyer_id, task.seller_id, computeFee, "compute_fee", createdAt);
     }
 
     return findTaskById.get(task.id);
@@ -409,12 +411,12 @@ function createTasksHandlers(db) {
     const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
     const task = findTaskById.get(taskId);
 
-    if (!reason) {
-      return res.status(400).json({ error: "Field 'reason' is required" });
-    }
-
     if (!task) {
       return res.status(404).json({ error: "Task not found" });
+    }
+
+    if (!reason) {
+      return res.status(400).json({ error: "Field 'reason' is required" });
     }
 
     if (task.buyer_id !== req.agent.id) {
@@ -423,6 +425,17 @@ function createTasksHandlers(db) {
 
     if (task.status !== "delivered") {
       return res.status(409).json({ error: `Task ${task.id} is already ${task.status}` });
+    }
+
+    // Check buyer has enough balance for compute fee on first rejection
+    if (Number(task.revision_count) < 1) {
+      const computeFee = roundCurrency(Number(task.agreed_price) * 0.25);
+      const buyerBalance = findBuyerBalance.get(task.buyer_id)?.wallet_balance ?? 0;
+      if (buyerBalance < computeFee) {
+        return res.status(402).json({
+          error: `Insufficient wallet balance for compute fee. Need $${computeFee} to compensate seller for rejected work`,
+        });
+      }
     }
 
     return res.status(200).json(normalizeTask(rejectDeliveredTask(task, reason)));

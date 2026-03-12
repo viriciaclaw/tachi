@@ -607,7 +607,7 @@ describe("Phase 4 API", () => {
       expect(response.body.rejection_reason).toBe("Needs revision");
     });
 
-    test("first rejection pays compute fee to seller", async () => {
+    test("first rejection pays compute fee to seller from buyer wallet", async () => {
       ctx = setupServer();
       const { taskId } = await createInProgressTask(ctx, 5);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
@@ -616,6 +616,7 @@ describe("Phase 4 API", () => {
       });
 
       const sellerBefore = ctx.db.prepare("SELECT wallet_balance FROM agents WHERE id = ?").get("seller-1").wallet_balance;
+      const buyerBefore = ctx.db.prepare("SELECT wallet_balance FROM agents WHERE id = ?").get("buyer-1").wallet_balance;
 
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
         headers: { "X-API-Key": "buyer-key" },
@@ -623,13 +624,16 @@ describe("Phase 4 API", () => {
       });
 
       const sellerAfter = ctx.db.prepare("SELECT wallet_balance FROM agents WHERE id = ?").get("seller-1").wallet_balance;
+      const buyerAfter = ctx.db.prepare("SELECT wallet_balance FROM agents WHERE id = ?").get("buyer-1").wallet_balance;
       const transaction = ctx.db
-        .prepare("SELECT type, to_agent, amount FROM transactions WHERE task_id = ? AND type = 'compute_fee' LIMIT 1")
+        .prepare("SELECT type, from_agent, to_agent, amount FROM transactions WHERE task_id = ? AND type = 'compute_fee' LIMIT 1")
         .get(taskId);
 
       expect(sellerAfter - sellerBefore).toBeCloseTo(1.25, 5);
+      expect(buyerBefore - buyerAfter).toBeCloseTo(1.25, 5); // buyer paid the compute fee
       expect(transaction).toEqual({
         type: "compute_fee",
+        from_agent: "buyer-1",
         to_agent: "seller-1",
         amount: 1.25,
       });
