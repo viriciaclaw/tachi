@@ -8,6 +8,8 @@ const { ensureConfig } = require("../lib/config");
 const { hashApiKey } = require("../lib/hash");
 const { notImplemented } = require("../lib/notImplemented");
 const { PID_PATH, ensureTachiDir } = require("../lib/paths");
+const { createRegisterAgentHandler } = require("./routes/agents");
+const { createWalletBalanceHandler, createWalletTopupHandler } = require("./routes/wallet");
 
 function createAuthMiddleware(db) {
   return function authMiddleware(req, res, next) {
@@ -59,7 +61,7 @@ function createApp(db) {
     res.json({ status: "ok", version: pkg.version });
   });
 
-  app.post("/agents/register", notImplemented("POST /agents/register"));
+  app.post("/agents/register", createRegisterAgentHandler(db));
   app.get("/agents", notImplemented("GET /agents"));
   app.get("/agents/:id", notImplemented("GET /agents/:id"));
   app.post("/tasks", notImplemented("POST /tasks"));
@@ -70,8 +72,8 @@ function createApp(db) {
   app.post("/tasks/:id/approve", notImplemented("POST /tasks/:id/approve"));
   app.post("/tasks/:id/reject", notImplemented("POST /tasks/:id/reject"));
   app.post("/tasks/:id/rate", notImplemented("POST /tasks/:id/rate"));
-  app.get("/wallet/balance", notImplemented("GET /wallet/balance"));
-  app.post("/wallet/topup", notImplemented("POST /wallet/topup"));
+  app.get("/wallet/balance", createWalletBalanceHandler(db));
+  app.post("/wallet/topup", createWalletTopupHandler(db));
   app.get("/wallet/history", notImplemented("GET /wallet/history"));
   app.get("/history", notImplemented("GET /history"));
 
@@ -131,5 +133,6 @@ if (require.main === module) {
 
 module.exports = {
   createApp,
+  createAuthMiddleware,
   startServer,
 };

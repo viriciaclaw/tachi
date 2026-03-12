@@ -8,7 +8,8 @@
   },
   "scripts": {
     "start": "node server/index.js",
-    "migrate": "node db/migrate.js"
+    "migrate": "node db/migrate.js",
+    "test": "jest --forceExit --detectOpenHandles"
   },
   "keywords": [
     "cli",
@@ -23,5 +24,9 @@
     "commander": "^14.0.0",
     "express": "^5.1.0",
     "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
   }
 }

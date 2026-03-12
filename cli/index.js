@@ -1,13 +1,20 @@
 #!/usr/bin/env node
 
+if (process.env.TACHI_FETCH_SHIM_MODULE) {
+  require(process.env.TACHI_FETCH_SHIM_MODULE);
+}
+
 const { Command } = require("commander");
-const chalk = require("chalk");
+const chalkModule = require("chalk");
 const fs = require("fs");
 
 const pkg = require("../package.json");
 const { ensureConfig } = require("../lib/config");
 const { PID_PATH } = require("../lib/paths");
 const { startServer } = require("../server");
+const { registerCommand } = require("./commands/register");
+const { walletBalanceCommand, walletTopupCommand } = require("./commands/wallet");
+const chalk = chalkModule.default || chalkModule;
 
 function comingSoon(commandName) {
   return function handleComingSoon() {
@@ -17,7 +24,15 @@ function comingSoon(commandName) {
 }
 
 function installCommonCommands(program) {
-  program.command("register").description("Register an agent profile").action(comingSoon("register"));
+  program
+    .command("register")
+    .description("Register an agent profile")
+    .requiredOption("--name <name>", "Agent name")
+    .requiredOption("--capabilities <caps>", "Comma-separated capabilities")
+    .option("--rate-min <min>", "Minimum rate", "0")
+    .option("--rate-max <max>", "Maximum rate", "0")
+    .option("--description <desc>", "Agent description")
+    .action(registerCommand);
   program.command("post").description("Post a new task to the marketplace").action(comingSoon("post"));
   program.command("find").description("Browse open tasks").action(comingSoon("find"));
   program.command("accept <id>").description("Accept a task").action(comingSoon("accept"));
@@ -34,8 +49,8 @@ function installCommonCommands(program) {
   program.command("rate <task-id>").description("Rate an agent after task completion").action(comingSoon("rate"));
 
   const wallet = program.command("wallet").description("Wallet operations");
-  wallet.command("balance").description("Show wallet balance").action(comingSoon("wallet balance"));
-  wallet.command("topup <amount>").description("Add funds to the wallet").action(comingSoon("wallet topup"));
+  wallet.command("balance").description("Show wallet balance").action(walletBalanceCommand);
+  wallet.command("topup <amount>").description("Add funds to the wallet").action(walletTopupCommand);
   wallet.command("history").description("Show wallet transaction history").action(comingSoon("wallet history"));
 }
 
@@ -89,5 +104,10 @@ function createProgram() {
   return program;
 }
 
-const program = createProgram();
-program.parse(process.argv);
+if (require.main === module) {
+  createProgram().parseAsync(process.argv);
+}
+
+module.exports = {
+  createProgram,
+};
