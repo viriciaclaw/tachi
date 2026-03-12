@@ -6,16 +6,6 @@ const DEFAULT_REVIEW_WINDOW_MS = 7_200_000;
 const NEW_AGENT_TASK_CAP = 10;
 const BUYER_SURCHARGE_MULTIPLIER = 1.08;
 
-function legacyStubResponse(res, route) {
-  return res.status(501).json({
-    error: "Not implemented yet",
-    route,
-  });
-}
-
-function isLegacyMockRequest(req, propertyName) {
-  return req.socket === undefined && !Object.prototype.hasOwnProperty.call(req, propertyName);
-}
 
 function parseBoolean(value, fallback) {
   if (typeof value === "boolean") {
@@ -203,10 +193,6 @@ function createTasksHandlers(db) {
   });
 
   function postTask(req, res) {
-    if (req.body === undefined) {
-      return legacyStubResponse(res, "POST /tasks");
-    }
-
     const body = req.body ?? {};
     const capability = typeof body.capability === "string" ? body.capability.trim() : "";
     const spec = typeof body.spec === "string" ? body.spec.trim() : "";
@@ -262,10 +248,6 @@ function createTasksHandlers(db) {
   }
 
   function findTasks(req, res) {
-    if (isLegacyMockRequest(req, "query")) {
-      return legacyStubResponse(res, "GET /tasks");
-    }
-
     const status = getQueryValue(req, "status") || "open";
     const capability = getQueryValue(req, "capability");
     const tasks = findTasksStatement
@@ -279,10 +261,6 @@ function createTasksHandlers(db) {
   }
 
   function acceptTaskHandler(req, res) {
-    if (req.params === undefined) {
-      return legacyStubResponse(res, "POST /tasks/:id/accept");
-    }
-
     const taskId = getTaskIdParam(req);
 
     if (!taskId) {
