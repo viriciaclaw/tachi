@@ -6,9 +6,10 @@ const { runMigrations } = require("../db/migrate");
 const { openDatabase } = require("../db");
 const { ensureConfig } = require("../lib/config");
 const { hashApiKey } = require("../lib/hash");
-const { notImplemented } = require("../lib/notImplemented");
 const { PID_PATH, ensureTachiDir } = require("../lib/paths");
 const { createRegisterAgentHandler } = require("./routes/agents");
+const { createGetAgentHandler, createListAgentsHandler } = require("./routes/agentRead");
+const { createTaskHistoryHandler, createWalletHistoryHandler } = require("./routes/history");
 const { createTasksHandlers } = require("./routes/tasks");
 const { createWalletBalanceHandler, createWalletTopupHandler } = require("./routes/wallet");
 
@@ -64,8 +65,8 @@ function createApp(db) {
   });
 
   app.post("/agents/register", createRegisterAgentHandler(db));
-  app.get("/agents", notImplemented("GET /agents"));
-  app.get("/agents/:id", notImplemented("GET /agents/:id"));
+  app.get("/agents", createListAgentsHandler(db));
+  app.get("/agents/:id", createGetAgentHandler(db));
   app.post("/tasks", tasksHandlers.postTask);
   app.get("/tasks", tasksHandlers.findTasks);
   app.get("/tasks/mine", tasksHandlers.findMyTasks);
@@ -77,8 +78,8 @@ function createApp(db) {
   app.post("/tasks/:id/rate", tasksHandlers.rateTask);
   app.get("/wallet/balance", createWalletBalanceHandler(db));
   app.post("/wallet/topup", createWalletTopupHandler(db));
-  app.get("/wallet/history", notImplemented("GET /wallet/history"));
-  app.get("/history", notImplemented("GET /history"));
+  app.get("/wallet/history", createWalletHistoryHandler(db));
+  app.get("/history", createTaskHistoryHandler(db));
 
   app.use((req, res) => {
     res.status(404).json({ error: `Route not found: ${req.method} ${req.path}` });

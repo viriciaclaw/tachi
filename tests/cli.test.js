@@ -24,10 +24,12 @@ async function runCliWithEnv(args, homeDir, extraEnv = {}) {
   const originalStderrWrite = process.stderr.write;
   const originalConsoleLog = console.log;
   const originalConsoleError = console.error;
+  const originalExitCode = process.exitCode;
   let output = "";
 
   process.env.TACHI_HOME = homeDir;
   Object.assign(process.env, extraEnv);
+  process.exitCode = 0;
   process.stdout.write = (chunk, encoding, callback) => {
     output += String(chunk);
     if (typeof callback === "function") {
@@ -92,6 +94,7 @@ async function runCliWithEnv(args, homeDir, extraEnv = {}) {
     process.stderr.write = originalStderrWrite;
     console.log = originalConsoleLog;
     console.error = originalConsoleError;
+    process.exitCode = originalExitCode;
   }
 
   return stripAnsi(output);
@@ -216,5 +219,170 @@ describe("CLI", () => {
     });
 
     expect(output.trim()).toBe("Balance: $11");
+  });
+
+  test("tachi agents lists registered agents", async () => {
+    serverHomeDir = createTempHome();
+    homeDir = createTempHome();
+    const configPath = path.join(homeDir, "config.json");
+    const otherHomeDir = createTempHome();
+    const otherConfigPath = path.join(otherHomeDir, "config.json");
+    const shimPath = path.join(__dirname, "helpers", "cli-fetch-shim.js");
+
+    fs.writeFileSync(configPath, JSON.stringify({ server_url: "http://tachi.test", api_key: null, agent_id: null }, null, 2));
+    fs.writeFileSync(otherConfigPath, JSON.stringify({ server_url: "http://tachi.test", api_key: null, agent_id: null }, null, 2));
+
+    await runCliWithEnv("register --name alpha --capabilities code", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv("register --name beta --capabilities design", otherHomeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+
+    const output = await runCliWithEnv("agents", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+
+    expect(output).toContain("ID | Name | Capabilities | Rating | Status");
+    expect(output).toContain("alpha");
+    expect(output).toContain("beta");
+
+    fs.rmSync(otherHomeDir, { recursive: true, force: true });
+  });
+
+  test("tachi agent <id> shows profile and reviews", async () => {
+    serverHomeDir = createTempHome();
+    homeDir = createTempHome();
+    const buyerConfigPath = path.join(homeDir, "config.json");
+    const sellerHomeDir = createTempHome();
+    const sellerConfigPath = path.join(sellerHomeDir, "config.json");
+    const shimPath = path.join(__dirname, "helpers", "cli-fetch-shim.js");
+
+    fs.writeFileSync(buyerConfigPath, JSON.stringify({ server_url: "http://tachi.test", api_key: null, agent_id: null }, null, 2));
+    fs.writeFileSync(sellerConfigPath, JSON.stringify({ server_url: "http://tachi.test", api_key: null, agent_id: null }, null, 2));
+
+    await runCliWithEnv("register --name buyer --capabilities code", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv("register --name seller --capabilities code", sellerHomeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+
+    const sellerConfig = JSON.parse(fs.readFileSync(sellerConfigPath, "utf8"));
+
+    await runCliWithEnv("wallet topup 100", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv("post --capability code --spec ship --budget 10", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    const taskId = global.__tachiTestDb.prepare("SELECT id FROM tasks ORDER BY created_at DESC, id DESC LIMIT 1").get().id;
+    await runCliWithEnv(`accept ${taskId}`, sellerHomeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv(`deliver ${taskId} --output /tmp/out.txt`, sellerHomeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv(`approve ${taskId}`, homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv(`rate ${taskId} --rating 5 --comment Excellent`, homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+
+    const output = await runCliWithEnv(`agent ${sellerConfig.agent_id}`, homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+
+    expect(output).toContain(`ID: ${sellerConfig.agent_id}`);
+    expect(output).toContain("Name: seller");
+    expect(output).toContain("Excellent");
+    expect(output).toContain("by buyer");
+
+    fs.rmSync(sellerHomeDir, { recursive: true, force: true });
+  });
+
+  test("tachi wallet history shows transactions", async () => {
+    serverHomeDir = createTempHome();
+    homeDir = createTempHome();
+    const configPath = path.join(homeDir, "config.json");
+    const shimPath = path.join(__dirname, "helpers", "cli-fetch-shim.js");
+
+    fs.writeFileSync(configPath, JSON.stringify({ server_url: "http://tachi.test", api_key: null, agent_id: null }, null, 2));
+
+    await runCliWithEnv("register --name wallet-user --capabilities code", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv("wallet topup 11", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+
+    const output = await runCliWithEnv("wallet history", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+
+    expect(output).toContain("ID | Type | Amount | Task | From | To");
+    expect(output).toContain("topup");
+    expect(output).toContain("$11");
+  });
+
+  test("tachi history shows task history", async () => {
+    serverHomeDir = createTempHome();
+    homeDir = createTempHome();
+    const buyerConfigPath = path.join(homeDir, "config.json");
+    const sellerHomeDir = createTempHome();
+    const sellerConfigPath = path.join(sellerHomeDir, "config.json");
+    const shimPath = path.join(__dirname, "helpers", "cli-fetch-shim.js");
+
+    fs.writeFileSync(buyerConfigPath, JSON.stringify({ server_url: "http://tachi.test", api_key: null, agent_id: null }, null, 2));
+    fs.writeFileSync(sellerConfigPath, JSON.stringify({ server_url: "http://tachi.test", api_key: null, agent_id: null }, null, 2));
+
+    await runCliWithEnv("register --name buyer --capabilities code", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv("register --name seller --capabilities code", sellerHomeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv("wallet topup 100", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    await runCliWithEnv("post --capability code --spec ship --budget 10", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+    const taskId = global.__tachiTestDb.prepare("SELECT id FROM tasks ORDER BY created_at DESC, id DESC LIMIT 1").get().id;
+    await runCliWithEnv(`accept ${taskId}`, sellerHomeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+
+    const output = await runCliWithEnv("history", homeDir, {
+      TACHI_FETCH_SHIM_MODULE: shimPath,
+      TACHI_TEST_SERVER_HOME: serverHomeDir,
+    });
+
+    expect(output).toContain("ID | Capability | Status | Buyer | Seller");
+    expect(output).toContain(taskId);
+    expect(output).toContain("in-progress");
+
+    fs.rmSync(sellerHomeDir, { recursive: true, force: true });
   });
 });

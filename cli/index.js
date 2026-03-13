@@ -12,9 +12,11 @@ const pkg = require("../package.json");
 const { ensureConfig } = require("../lib/config");
 const { PID_PATH } = require("../lib/paths");
 const { startServer } = require("../server");
+const { getAgentCommand, listAgentsCommand } = require("./commands/agentRead");
 const { createRateCommand } = require("./commands/rate");
 const { registerCommand } = require("./commands/register");
 const { callCommand } = require("./commands/call");
+const { taskHistoryCommand, walletHistoryCommand } = require("./commands/history");
 const {
   acceptTaskCommand,
   approveTaskCommand,
@@ -90,16 +92,16 @@ function installCommonCommands(program) {
     .option("--poll-interval <ms>", "Marketplace poll interval (ms)", "5000")
     .option("--release-check-interval <ms>", "Release check interval (ms)", "1000")
     .action(watchCommand);
-  program.command("history").description("Show task history").action(comingSoon("history"));
+  program.command("history").description("Show task history").action(taskHistoryCommand);
   program.command("status <id>").description("Show task status").action(taskStatusCommand);
-  program.command("agents").description("List agent profiles").action(comingSoon("agents"));
-  program.command("agent <id>").description("Show a single agent profile").action(comingSoon("agent"));
+  program.command("agents").description("List agent profiles").action(listAgentsCommand);
+  program.command("agent <id>").description("Show a single agent profile").action(getAgentCommand);
   program.addCommand(createRateCommand());
 
   const wallet = program.command("wallet").description("Wallet operations");
   wallet.command("balance").description("Show wallet balance").action(walletBalanceCommand);
   wallet.command("topup <amount>").description("Add funds to the wallet").action(walletTopupCommand);
-  wallet.command("history").description("Show wallet transaction history").action(comingSoon("wallet history"));
+  wallet.command("history").description("Show wallet transaction history").action(walletHistoryCommand);
 }
 
 function createProgram() {

@@ -205,7 +205,7 @@ describe("server and API", () => {
     expect(response.body.error).toMatch(/Invalid API key/);
   });
 
-  test("protected routes return 501 when valid API key is sent", async () => {
+  test("protected routes resolve when valid API key is sent", async () => {
     ctx = setupServer();
     ctx.insertAgent({ id: "agent-1", name: "alpha", apiKey: "valid-key" });
 
@@ -213,11 +213,13 @@ describe("server and API", () => {
       headers: { "X-API-Key": "valid-key" },
     });
 
-    expect(response.statusCode).toBe(501);
-    expect(response.body).toEqual({
-      error: "Not implemented yet",
-      route: "GET /agents",
-    });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        id: "agent-1",
+        name: "alpha",
+      }),
+    ]);
   });
 
   test("auth middleware sets req.agent on valid key", async () => {
@@ -261,27 +263,23 @@ describe("server and API", () => {
     expect(response.body.error).toBe("Route not found: GET /missing");
   });
 
-  test("all protected route stubs exist and return 501", async () => {
+  test("phase 9 read routes exist", async () => {
     ctx = setupServer();
     ctx.insertAgent({ id: "agent-1", name: "alpha", apiKey: "valid-key" });
 
     const routes = [
-      ["GET", "/agents", "GET /agents"],
-      ["GET", "/agents/agent-1", "GET /agents/:id"],
-      ["GET", "/wallet/history", "GET /wallet/history"],
-      ["GET", "/history", "GET /history"],
+      ["GET", "/agents", 200],
+      ["GET", "/agents/agent-1", 200],
+      ["GET", "/wallet/history", 200],
+      ["GET", "/history", 200],
     ];
 
-    for (const [method, requestPath, route] of routes) {
+    for (const [method, requestPath, statusCode] of routes) {
       const response = await simulateRequest(ctx.app, method, requestPath, {
         headers: { "X-API-Key": "valid-key" },
       });
 
-      expect(response.statusCode).toBe(501);
-      expect(response.body).toEqual({
-        error: "Not implemented yet",
-        route,
-      });
+      expect(response.statusCode).toBe(statusCode);
     }
   });
 });

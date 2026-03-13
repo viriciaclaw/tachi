@@ -598,5 +598,6 @@ module.exports = {
   DEFAULT_REVIEW_WINDOW_MS,
   NEW_AGENT_TASK_CAP,
   createTasksHandlers,
+  normalizeTask,
   toPublicTask,
 };
