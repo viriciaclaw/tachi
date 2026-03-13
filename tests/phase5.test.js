@@ -341,7 +341,7 @@ async function createCallCliContext() {
   };
 }
 
-function scheduleSpecialistLifecycle(sellerId, outputPath = "/tmp/output.txt") {
+function scheduleSpecialistLifecycle(sellerId, outputPath = "/tmp/tachi/output.txt") {
   setTimeout(() => {
     const db = global.__tachiTestDb;
     if (!db) {
@@ -485,7 +485,7 @@ describe("Phase 5: tachi call", () => {
         .run("seller-1", 5, new Date().toISOString(), postResponse.body.id);
       ctx.db
         .prepare("UPDATE tasks SET status = 'delivered', output_path = ?, delivered_at = ? WHERE id = ?")
-        .run("/tmp/output.txt", new Date().toISOString(), postResponse.body.id);
+        .run("/tmp/tachi/output.txt", new Date().toISOString(), postResponse.body.id);
 
       const { pollForStatus } = require("../cli/commands/call");
       const task = await pollForStatus(
@@ -502,7 +502,7 @@ describe("Phase 5: tachi call", () => {
         expect.objectContaining({
           id: postResponse.body.id,
           status: "delivered",
-          output_path: "/tmp/output.txt",
+          output_path: "/tmp/tachi/output.txt",
         }),
       );
     });
@@ -523,7 +523,7 @@ describe("Phase 5: tachi call", () => {
 
       ctx.db
         .prepare("UPDATE tasks SET seller_id = ?, status = 'delivered', agreed_price = ?, accepted_at = ?, delivered_at = ?, output_path = ? WHERE id = ?")
-        .run("seller-1", 5, new Date().toISOString(), new Date().toISOString(), "/tmp/output.txt", postResponse.body.id);
+        .run("seller-1", 5, new Date().toISOString(), new Date().toISOString(), "/tmp/tachi/output.txt", postResponse.body.id);
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${postResponse.body.id}/approve`, {
         headers: { "X-API-Key": "buyer-key" },
@@ -588,7 +588,7 @@ describe("Phase 5: tachi call", () => {
 
       expect(output).toContain("Task posted:");
       expect(output).toContain(`Specialist ${cliCtx.sellerConfig.agent_id} accepted! Waiting for delivery...`);
-      expect(output).toContain("Work delivered! Output: /tmp/output.txt");
+      expect(output).toContain("Work delivered! Output: /tmp/tachi/output.txt");
       expect(output).toContain("Auto-approved task");
     });
 
@@ -599,7 +599,7 @@ describe("Phase 5: tachi call", () => {
       serverHome = cliCtx.serverHome;
 
       fs.writeFileSync(cliCtx.serverConfigPath, JSON.stringify(cliCtx.buyerConfig, null, 2));
-      scheduleSpecialistLifecycle(cliCtx.sellerConfig.agent_id, "/tmp/final-output.txt");
+      scheduleSpecialistLifecycle(cliCtx.sellerConfig.agent_id, "/tmp/tachi/final-output.txt");
 
       const output = await runCliWithEnv(
         "call code --spec deliver-phase-5 --budget 5 --timeout 3000 --delivery-timeout 3000",
@@ -614,7 +614,7 @@ describe("Phase 5: tachi call", () => {
       const taskId = output.match(/Task posted: ([^.]+)/)?.[1];
 
       expect(output).toContain("Task posted:");
-      expect(output).toContain("Work delivered! Output: /tmp/final-output.txt");
+      expect(output).toContain("Work delivered! Output: /tmp/tachi/final-output.txt");
       expect(output).toContain(`Task ${taskId} delivered. Review with: tachi status ${taskId}`);
       expect(output).toContain(`Approve: tachi approve ${taskId}`);
       expect(output).toContain(`Reject: tachi reject ${taskId} --reason <text>`);

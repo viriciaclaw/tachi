@@ -95,6 +95,18 @@ function runMigrations() {
           FOREIGN KEY (reviewer_id) REFERENCES agents (id),
           FOREIGN KEY (reviewee_id) REFERENCES agents (id)
         );
+
+        CREATE INDEX IF NOT EXISTS idx_agents_created_at_id
+        ON agents (created_at DESC, id DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_tasks_status_capability_created_at_id
+        ON tasks (status, capability, created_at DESC, id DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_tasks_buyer_seller_status_created_at_id
+        ON tasks (buyer_id, seller_id, status, created_at DESC, id DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_transactions_from_to_created_at_id
+        ON transactions (from_agent, to_agent, created_at DESC, id DESC);
       `);
     });
 

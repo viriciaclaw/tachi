@@ -173,7 +173,7 @@ describe("Demo lifecycle (mirrors scripts/demo.sh)", () => {
   test("bob delivers → delivered", async () => {
     const res = await api("POST", `/tasks/${taskId}/deliver`, {
       apiKey: bob.apiKey,
-      body: { output_path: "/tmp/tachi-demo/review-output.md" },
+      body: { output_path: "/tmp/tachi/tachi-demo/review-output.md" },
     });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("delivered");
@@ -267,7 +267,7 @@ describe("CLI --help completeness", () => {
   beforeAll(() => {
     const cliPath = path.join(__dirname, "..", "cli", "index.js");
     helpOutput = execSync(`node ${cliPath} --help`, {
-      env: { ...process.env, TACHI_HOME: "/tmp/tachi-help-test-" + Date.now() },
+      env: { ...process.env, TACHI_HOME: "/tmp/tachi/tachi-help-test-" + Date.now() },
     }).toString();
   });
 
@@ -441,7 +441,7 @@ describe("Demo edge cases: multi-agent wallet isolation", () => {
     await api("POST", `/tasks/${taskId}/accept`, { apiKey: seller.apiKey });
     await api("POST", `/tasks/${taskId}/deliver`, {
       apiKey: seller.apiKey,
-      body: { output_path: "/tmp/edge.md" },
+      body: { output_path: "/tmp/tachi/edge.md" },
     });
     await api("POST", `/tasks/${taskId}/approve`, { apiKey: buyer.apiKey });
   });

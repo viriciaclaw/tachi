@@ -210,11 +210,11 @@ describe("Full lifecycle integration (Phases 1-9)", () => {
   test("seller delivers output", async () => {
     const res = await simulateRequest("POST", `/tasks/${task1Id}/deliver`, {
       apiKey: seller.apiKey,
-      body: { output_path: "/results/review-1.md" },
+      body: { output_path: "/tmp/tachi/results/review-1.md" },
     });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("delivered");
-    expect(res.body.output_path).toBe("/results/review-1.md");
+    expect(res.body.output_path).toBe("/tmp/tachi/results/review-1.md");
   });
 
   test("buyer approves — escrow releases correctly", async () => {
@@ -293,7 +293,7 @@ describe("Full lifecycle integration (Phases 1-9)", () => {
     // Seller delivers
     res = await simulateRequest("POST", `/tasks/${task2Id}/deliver`, {
       apiKey: seller.apiKey,
-      body: { output_path: "/results/v1.md" },
+      body: { output_path: "/tmp/tachi/results/v1.md" },
     });
     expect(res.status).toBe(200);
 
@@ -316,7 +316,7 @@ describe("Full lifecycle integration (Phases 1-9)", () => {
     // Seller re-delivers
     res = await simulateRequest("POST", `/tasks/${task2Id}/deliver`, {
       apiKey: seller.apiKey,
-      body: { output_path: "/results/v2.md" },
+      body: { output_path: "/tmp/tachi/results/v2.md" },
     });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("delivered");
@@ -352,7 +352,7 @@ describe("Full lifecycle integration (Phases 1-9)", () => {
     // Deliver → Reject (first)
     res = await simulateRequest("POST", `/tasks/${task3Id}/deliver`, {
       apiKey: seller.apiKey,
-      body: { output_path: "/out/v1.md" },
+      body: { output_path: "/tmp/tachi/out/v1.md" },
     });
     res = await simulateRequest("POST", `/tasks/${task3Id}/reject`, {
       apiKey: buyer.apiKey,
@@ -363,7 +363,7 @@ describe("Full lifecycle integration (Phases 1-9)", () => {
     // Deliver → Reject (second) → disputed
     res = await simulateRequest("POST", `/tasks/${task3Id}/deliver`, {
       apiKey: seller.apiKey,
-      body: { output_path: "/out/v2.md" },
+      body: { output_path: "/tmp/tachi/out/v2.md" },
     });
     res = await simulateRequest("POST", `/tasks/${task3Id}/reject`, {
       apiKey: buyer.apiKey,

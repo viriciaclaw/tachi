@@ -1,8 +1,9 @@
 const { v4: uuidv4 } = require("uuid");
+const { isValidCurrencyAmount, roundCurrency } = require("../../lib/money");
 
 function createWalletTopupHandler(db) {
   const applyTopup = db.transaction((agentId, amount, createdAt) => {
-    db.prepare("UPDATE agents SET wallet_balance = wallet_balance + ? WHERE id = ?").run(amount, agentId);
+    db.prepare("UPDATE agents SET wallet_balance = ROUND(wallet_balance + ?, 2) WHERE id = ?").run(amount, agentId);
 
     const balanceRow = db.prepare("SELECT wallet_balance FROM agents WHERE id = ?").get(agentId);
     const transactionId = uuidv4();
@@ -21,11 +22,11 @@ function createWalletTopupHandler(db) {
   return function walletTopup(req, res) {
     const amount = Number(req.body?.amount);
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({ error: "Field 'amount' must be a positive number" });
+    if (!isValidCurrencyAmount(amount)) {
+      return res.status(400).json({ error: "Field 'amount' must be a positive number with at most 2 decimal places" });
     }
 
-    const result = applyTopup(req.agent.id, amount, new Date().toISOString());
+    const result = applyTopup(req.agent.id, roundCurrency(amount), new Date().toISOString());
     return res.status(200).json({
       balance: result.balance,
       transaction_id: result.transactionId,

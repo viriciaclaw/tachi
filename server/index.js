@@ -48,7 +48,7 @@ function createAuthMiddleware(db) {
       req.agent = agent;
       return next();
     } catch (error) {
-      return res.status(500).json({ error: `Authentication failed: ${error.message}` });
+      return res.status(500).json({ error: "Authentication failed" });
     }
   };
 }

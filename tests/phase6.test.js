@@ -483,7 +483,7 @@ describe("Phase 6: auto-release logic", () => {
       reviewWindowMs: 7_200_000,
       agreedPrice: 5,
       budgetMax: 5,
-      outputPath: "/tmp/output.txt",
+      outputPath: "/tmp/tachi/output.txt",
     });
 
     const originalHome = process.env.TACHI_HOME;
@@ -533,7 +533,7 @@ describe("Phase 6: auto-release logic", () => {
       reviewWindowMs: 7_200_000,
       agreedPrice: 5,
       budgetMax: 5,
-      outputPath: "/tmp/output.txt",
+      outputPath: "/tmp/tachi/output.txt",
     });
 
     const originalFetch = global.fetch;
@@ -574,7 +574,7 @@ describe("Phase 6: auto-release logic", () => {
       reviewWindowMs: 7_200_000,
       agreedPrice: 5,
       budgetMax: 5,
-      outputPath: "/tmp/output.txt",
+      outputPath: "/tmp/tachi/output.txt",
     });
 
     const originalFetch = global.fetch;
@@ -754,7 +754,7 @@ describe("Phase 6: watch CLI", () => {
       100,
       "delivered",
       null,
-      "/tmp/output.txt",
+      "/tmp/tachi/output.txt",
       null,
       0,
       "2026-03-12T00:00:00.000Z",
@@ -804,7 +804,7 @@ describe("Phase 6: watch CLI", () => {
       100,
       "delivered",
       null,
-      "/tmp/output.txt",
+      "/tmp/tachi/output.txt",
       null,
       0,
       "2026-03-12T00:00:00.000Z",

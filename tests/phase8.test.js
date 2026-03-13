@@ -190,7 +190,7 @@ async function createApprovedTask(ctx, options = {}) {
 
   const deliverRes = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
     headers: { "X-API-Key": seller.api_key },
-    body: { output_path: "/output/result.txt" },
+    body: { output_path: "/tmp/tachi/output/result.txt" },
   });
   expect(deliverRes.statusCode).toBe(200);
 

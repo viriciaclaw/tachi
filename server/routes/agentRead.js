@@ -1,3 +1,5 @@
+const { parsePagination } = require("../../lib/pagination");
+
 function parseCapabilities(value) {
   if (!value) {
     return [];
@@ -55,10 +57,18 @@ function createListAgentsHandler(db) {
       created_at
     FROM agents
     ORDER BY created_at DESC, id DESC
+    LIMIT @limit OFFSET @offset
   `);
 
-  return function listAgents(_req, res) {
-    return res.status(200).json(findAgents.all().map(toPublicAgent));
+  return function listAgents(req, res) {
+    const pagination = parsePagination(req.query);
+    if (pagination.error) {
+      return res.status(400).json({ error: pagination.error });
+    }
+
+    return res.status(200).json(
+      findAgents.all(pagination).map(toPublicAgent),
+    );
   };
 }
 

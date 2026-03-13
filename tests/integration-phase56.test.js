@@ -174,7 +174,7 @@ describe("Phase 5+6 Cross-phase integration", () => {
       // 3. Seller delivers
       const deliverRes = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/result.txt" },
+        body: { output_path: "/tmp/tachi/result.txt" },
       });
       expect(deliverRes.statusCode).toBe(200);
 
@@ -221,7 +221,7 @@ describe("Phase 5+6 Cross-phase integration", () => {
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/out.txt" },
+        body: { output_path: "/tmp/tachi/out.txt" },
       });
 
       // Simulate time passing beyond review window by backdating delivered_at
@@ -318,7 +318,7 @@ describe("Phase 5+6 Cross-phase integration", () => {
         const tid = postRes.body.id;
         await simulateRequest(ctx.app, "POST", `/tasks/${tid}/accept`, { headers: { "X-API-Key": "sk" } });
         await simulateRequest(ctx.app, "POST", `/tasks/${tid}/deliver`, {
-          headers: { "X-API-Key": "sk" }, body: { output_path: `/tmp/out-${i}.txt` },
+          headers: { "X-API-Key": "sk" }, body: { output_path: `/tmp/tachi/out-${i}.txt` },
         });
         await simulateRequest(ctx.app, "POST", `/tasks/${tid}/approve`, { headers: { "X-API-Key": "bk" } });
       }
@@ -413,7 +413,7 @@ describe("Phase 5+6 Cross-phase integration", () => {
       ctx.insertTask({
         id: "t-recent", buyerId: "buyer", sellerId: "seller",
         status: "delivered", deliveredAt: thirtyMinAgo,
-        reviewWindowMs: 7_200_000, agreedPrice: 5, budgetMax: 5, outputPath: "/tmp/out.txt",
+        reviewWindowMs: 7_200_000, agreedPrice: 5, budgetMax: 5, outputPath: "/tmp/tachi/out.txt",
       });
 
       // GET /tasks/mine shows it as delivered
@@ -446,7 +446,7 @@ describe("Phase 5+6 Cross-phase integration", () => {
       ctx.insertTask({
         id: "t-expired", buyerId: "buyer", sellerId: "seller",
         status: "delivered", deliveredAt: threeHoursAgo,
-        reviewWindowMs: 7_200_000, agreedPrice: 5, budgetMax: 5, outputPath: "/tmp/out.txt",
+        reviewWindowMs: 7_200_000, agreedPrice: 5, budgetMax: 5, outputPath: "/tmp/tachi/out.txt",
       });
 
       // Verify review window expired
@@ -565,7 +565,7 @@ describe("Phase 5+6 Cross-phase integration", () => {
       // Step 4: Seller delivers work
       const deliverRes = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/widget-v1.js" },
+        body: { output_path: "/tmp/tachi/widget-v1.js" },
       });
       expect(deliverRes.statusCode).toBe(200);
 

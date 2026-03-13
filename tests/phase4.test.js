@@ -332,7 +332,7 @@ async function createInProgressTask(ctx, budgetMax = 5) {
       capability: "code",
       spec: "ship phase 4",
       budget_max: budgetMax,
-      input_path: "/tmp/input.txt",
+      input_path: "/tmp/tachi/input.txt",
     },
   });
 
@@ -377,7 +377,7 @@ async function createCliAcceptedTask() {
     TACHI_TEST_SERVER_HOME: serverHome,
   });
 
-  const postOutput = await runCliWithEnv("post --capability code --spec deliver --budget 5 --input /tmp/input.txt", buyerHome, {
+  const postOutput = await runCliWithEnv("post --capability code --spec deliver --budget 5 --input /tmp/tachi/input.txt", buyerHome, {
     TACHI_FETCH_SHIM_MODULE: shimPath,
     TACHI_TEST_SERVER_HOME: serverHome,
   });
@@ -418,7 +418,7 @@ describe("Phase 4 API", () => {
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       expect(response.statusCode).toBe(200);
@@ -426,7 +426,7 @@ describe("Phase 4 API", () => {
         expect.objectContaining({
           id: taskId,
           status: "delivered",
-          output_path: "/tmp/output.txt",
+          output_path: "/tmp/tachi/output.txt",
           delivered_at: expect.any(String),
         }),
       );
@@ -438,7 +438,7 @@ describe("Phase 4 API", () => {
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "buyer-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       expect(response.statusCode).toBe(403);
@@ -451,7 +451,7 @@ describe("Phase 4 API", () => {
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       expect(response.statusCode).toBe(409);
@@ -463,7 +463,7 @@ describe("Phase 4 API", () => {
 
       const response = await simulateRequest(ctx.app, "POST", "/tasks/missing-task/deliver", {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       expect(response.statusCode).toBe(404);
@@ -486,7 +486,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       expect(response.statusCode).toBe(401);
@@ -499,7 +499,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx, 5);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       const buyerBefore = ctx.db.prepare("SELECT wallet_balance FROM agents WHERE id = ?").get("buyer-1").wallet_balance;
@@ -534,7 +534,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/approve`, {
@@ -560,7 +560,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/approve`, {
         headers: { "X-API-Key": "buyer-key" },
@@ -578,7 +578,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/approve`);
@@ -593,7 +593,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
@@ -612,7 +612,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx, 5);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       const sellerBefore = ctx.db.prepare("SELECT wallet_balance FROM agents WHERE id = ?").get("seller-1").wallet_balance;
@@ -644,7 +644,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
         headers: { "X-API-Key": "buyer-key" },
@@ -652,7 +652,7 @@ describe("Phase 4 API", () => {
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output-v2.txt" },
+        body: { output_path: "/tmp/tachi/output-v2.txt" },
       });
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
@@ -675,7 +675,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
@@ -703,7 +703,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
@@ -719,7 +719,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
@@ -736,7 +736,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
         headers: { "X-API-Key": "buyer-key" },
@@ -747,12 +747,12 @@ describe("Phase 4 API", () => {
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output-v2.txt" },
+        body: { output_path: "/tmp/tachi/output-v2.txt" },
       });
 
       expect(response.statusCode).toBe(200);
       expect(response.body.status).toBe("delivered");
-      expect(response.body.output_path).toBe("/tmp/output-v2.txt");
+      expect(response.body.output_path).toBe("/tmp/tachi/output-v2.txt");
       expect(response.body.delivered_at).not.toBe("2026-03-12T00:00:00.000Z");
     });
 
@@ -761,7 +761,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx, 5);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
         headers: { "X-API-Key": "buyer-key" },
@@ -769,7 +769,7 @@ describe("Phase 4 API", () => {
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output-v2.txt" },
+        body: { output_path: "/tmp/tachi/output-v2.txt" },
       });
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/approve`, {
@@ -785,7 +785,7 @@ describe("Phase 4 API", () => {
       const { taskId } = await createInProgressTask(ctx);
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
         headers: { "X-API-Key": "buyer-key" },
@@ -793,7 +793,7 @@ describe("Phase 4 API", () => {
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "seller-key" },
-        body: { output_path: "/tmp/output-v2.txt" },
+        body: { output_path: "/tmp/tachi/output-v2.txt" },
       });
 
       const response = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/reject`, {
@@ -816,8 +816,8 @@ describe("Phase 4 API", () => {
         buyerId: "buyer-1",
         sellerId: "seller-1",
         status: "delivered",
-        inputPath: "/tmp/input.txt",
-        outputPath: "/tmp/output.txt",
+        inputPath: "/tmp/tachi/input.txt",
+        outputPath: "/tmp/tachi/output.txt",
       });
 
       const response = await simulateRequest(ctx.app, "GET", "/tasks/task-1", {
@@ -825,8 +825,8 @@ describe("Phase 4 API", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.body.input_path).toBe("/tmp/input.txt");
-      expect(response.body.output_path).toBe("/tmp/output.txt");
+      expect(response.body.input_path).toBe("/tmp/tachi/input.txt");
+      expect(response.body.output_path).toBe("/tmp/tachi/output.txt");
     });
 
     test("task not found returns 404", async () => {
@@ -875,7 +875,7 @@ describe("Phase 4 CLI", () => {
     serverHome = cliCtx.serverHome;
 
     fs.writeFileSync(cliCtx.serverConfigPath, JSON.stringify(cliCtx.sellerConfig, null, 2));
-    const output = await runCliWithEnv(`deliver ${cliCtx.taskId} --output /tmp/output.txt`, sellerHome, {
+    const output = await runCliWithEnv(`deliver ${cliCtx.taskId} --output /tmp/tachi/output.txt`, sellerHome, {
       TACHI_FETCH_SHIM_MODULE: cliCtx.shimPath,
       TACHI_TEST_SERVER_HOME: serverHome,
     });
@@ -890,7 +890,7 @@ describe("Phase 4 CLI", () => {
     serverHome = cliCtx.serverHome;
 
     fs.writeFileSync(cliCtx.serverConfigPath, JSON.stringify(cliCtx.sellerConfig, null, 2));
-    await runCliWithEnv(`deliver ${cliCtx.taskId} --output /tmp/output.txt`, sellerHome, {
+    await runCliWithEnv(`deliver ${cliCtx.taskId} --output /tmp/tachi/output.txt`, sellerHome, {
       TACHI_FETCH_SHIM_MODULE: cliCtx.shimPath,
       TACHI_TEST_SERVER_HOME: serverHome,
     });
@@ -911,7 +911,7 @@ describe("Phase 4 CLI", () => {
     serverHome = cliCtx.serverHome;
 
     fs.writeFileSync(cliCtx.serverConfigPath, JSON.stringify(cliCtx.sellerConfig, null, 2));
-    await runCliWithEnv(`deliver ${cliCtx.taskId} --output /tmp/output.txt`, sellerHome, {
+    await runCliWithEnv(`deliver ${cliCtx.taskId} --output /tmp/tachi/output.txt`, sellerHome, {
       TACHI_FETCH_SHIM_MODULE: cliCtx.shimPath,
       TACHI_TEST_SERVER_HOME: serverHome,
     });
@@ -932,7 +932,7 @@ describe("Phase 4 CLI", () => {
     serverHome = cliCtx.serverHome;
 
     fs.writeFileSync(cliCtx.serverConfigPath, JSON.stringify(cliCtx.sellerConfig, null, 2));
-    await runCliWithEnv(`deliver ${cliCtx.taskId} --output /tmp/output.txt`, sellerHome, {
+    await runCliWithEnv(`deliver ${cliCtx.taskId} --output /tmp/tachi/output.txt`, sellerHome, {
       TACHI_FETCH_SHIM_MODULE: cliCtx.shimPath,
       TACHI_TEST_SERVER_HOME: serverHome,
     });

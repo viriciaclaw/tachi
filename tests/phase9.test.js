@@ -168,7 +168,7 @@ async function createApprovedTask(ctx, buyer, seller, taskOverrides = {}) {
     spec: "Ship feature",
     budget_max: 10,
     description: "Phase 9 task",
-    input_path: "/tmp/in.txt",
+    input_path: "/tmp/tachi/in.txt",
     ...taskOverrides,
   });
 
@@ -179,7 +179,7 @@ async function createApprovedTask(ctx, buyer, seller, taskOverrides = {}) {
 
   const deliverResponse = await simulateRequest(ctx.app, "POST", `/tasks/${task.id}/deliver`, {
     headers: { "X-API-Key": seller.api_key },
-    body: { output_path: "/tmp/out.txt" },
+    body: { output_path: "/tmp/tachi/out.txt" },
   });
   expect(deliverResponse.statusCode).toBe(200);
 
@@ -203,7 +203,7 @@ async function createRejectedTask(ctx, buyer, seller) {
   });
   await simulateRequest(ctx.app, "POST", `/tasks/${task.id}/deliver`, {
     headers: { "X-API-Key": seller.api_key },
-    body: { output_path: "/tmp/revision.txt" },
+    body: { output_path: "/tmp/tachi/revision.txt" },
   });
 
   const rejectResponse = await simulateRequest(ctx.app, "POST", `/tasks/${task.id}/reject`, {
@@ -294,6 +294,39 @@ describe("Phase 9: Read Commands", () => {
           }),
         ]),
       );
+    });
+
+    test("applies default and offset pagination", async () => {
+      ctx = setupServer();
+      const viewer = await registerAgent(ctx.app, { name: "viewer", capabilities: ["code"] });
+
+      for (let index = 0; index < 55; index += 1) {
+        await registerAgent(ctx.app, { name: `agent-${index}`, capabilities: ["code"] });
+      }
+
+      const firstPage = await simulateRequest(ctx.app, "GET", "/agents", {
+        headers: { "X-API-Key": viewer.api_key },
+      });
+      const secondPage = await simulateRequest(ctx.app, "GET", "/agents?offset=50", {
+        headers: { "X-API-Key": viewer.api_key },
+      });
+
+      expect(firstPage.statusCode).toBe(200);
+      expect(firstPage.body).toHaveLength(50);
+      expect(secondPage.statusCode).toBe(200);
+      expect(secondPage.body).toHaveLength(6);
+    });
+
+    test("rejects over-large limits", async () => {
+      ctx = setupServer();
+      const viewer = await registerAgent(ctx.app, { name: "viewer", capabilities: ["code"] });
+
+      const response = await simulateRequest(ctx.app, "GET", "/agents?limit=101", {
+        headers: { "X-API-Key": viewer.api_key },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.body.error).toMatch(/limit/);
     });
   });
 
@@ -525,6 +558,30 @@ describe("Phase 9: Read Commands", () => {
       expect(response.statusCode).toBe(200);
       expect(response.body).toEqual([]);
     });
+
+    test("supports limit and offset pagination", async () => {
+      ctx = setupServer();
+      const agent = await registerAgent(ctx.app, { name: "alpha", capabilities: ["code"] });
+      const topups = [];
+
+      for (let index = 0; index < 4; index += 1) {
+        topups.push(await topupWallet(ctx.app, agent.api_key, index + 1));
+      }
+
+      ctx.db.prepare("UPDATE transactions SET created_at = ? WHERE id = ?").run("2026-03-10T00:00:00.000Z", topups[0].transaction_id);
+      ctx.db.prepare("UPDATE transactions SET created_at = ? WHERE id = ?").run("2026-03-11T00:00:00.000Z", topups[1].transaction_id);
+      ctx.db.prepare("UPDATE transactions SET created_at = ? WHERE id = ?").run("2026-03-12T00:00:00.000Z", topups[2].transaction_id);
+      ctx.db.prepare("UPDATE transactions SET created_at = ? WHERE id = ?").run("2026-03-13T00:00:00.000Z", topups[3].transaction_id);
+
+      const response = await simulateRequest(ctx.app, "GET", "/wallet/history?limit=2&offset=1", {
+        headers: { "X-API-Key": agent.api_key },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toHaveLength(2);
+      expect(response.body[0].amount).toBe(3);
+      expect(response.body[1].amount).toBe(2);
+    });
   });
 
   describe("GET /history", () => {
@@ -573,7 +630,7 @@ describe("Phase 9: Read Commands", () => {
       await topupWallet(ctx.app, buyer.api_key, 100);
       const taskId = await createApprovedTask(ctx, buyer, seller, {
         pii_mask: false,
-        input_path: "/tmp/input.md",
+        input_path: "/tmp/tachi/input.md",
       });
 
       const response = await simulateRequest(ctx.app, "GET", "/history", {
@@ -581,8 +638,8 @@ describe("Phase 9: Read Commands", () => {
       });
 
       expect(response.body.find((task) => task.id === taskId)).toEqual(expect.objectContaining({
-        input_path: "/tmp/input.md",
-        output_path: "/tmp/out.txt",
+        input_path: "/tmp/tachi/input.md",
+        output_path: "/tmp/tachi/out.txt",
         pii_mask: false,
       }));
     });
@@ -633,6 +690,28 @@ describe("Phase 9: Read Commands", () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.body).toEqual([]);
+    });
+
+    test("supports limit and offset pagination", async () => {
+      ctx = setupServer();
+      const buyer = await registerAgent(ctx.app, { name: "buyer", capabilities: ["code"] });
+      const seller = await registerAgent(ctx.app, { name: "seller", capabilities: ["code"] });
+      await topupWallet(ctx.app, buyer.api_key, 100);
+      const firstTaskId = await createApprovedTask(ctx, buyer, seller, { spec: "First task" });
+      const secondTaskId = await createApprovedTask(ctx, buyer, seller, { spec: "Second task" });
+      const thirdTaskId = await createApprovedTask(ctx, buyer, seller, { spec: "Third task" });
+
+      ctx.db.prepare("UPDATE tasks SET created_at = ? WHERE id = ?").run("2026-03-10T00:00:00.000Z", firstTaskId);
+      ctx.db.prepare("UPDATE tasks SET created_at = ? WHERE id = ?").run("2026-03-11T00:00:00.000Z", secondTaskId);
+      ctx.db.prepare("UPDATE tasks SET created_at = ? WHERE id = ?").run("2026-03-12T00:00:00.000Z", thirdTaskId);
+
+      const response = await simulateRequest(ctx.app, "GET", "/history?limit=1&offset=1", {
+        headers: { "X-API-Key": seller.api_key },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].id).toBe(secondTaskId);
     });
   });
 });

@@ -179,7 +179,7 @@ describe("Cross-phase integration", () => {
       // Deliver
       const deliverRes = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/result.txt" },
+        body: { output_path: "/tmp/tachi/result.txt" },
       });
       expect(deliverRes.statusCode).toBe(200);
 
@@ -242,7 +242,7 @@ describe("Cross-phase integration", () => {
       // Deliver
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/v1.txt" },
+        body: { output_path: "/tmp/tachi/v1.txt" },
       });
 
       // Buyer balance after post: 100 - 5.40 = 94.60
@@ -266,7 +266,7 @@ describe("Cross-phase integration", () => {
       // Re-deliver
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/v2.txt" },
+        body: { output_path: "/tmp/tachi/v2.txt" },
       });
 
       // Approve
@@ -312,7 +312,7 @@ describe("Cross-phase integration", () => {
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/accept`, { headers: { "X-API-Key": "sk" } });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/v1.txt" },
+        body: { output_path: "/tmp/tachi/v1.txt" },
       });
 
       // Buyer has $0 left — can't pay compute fee
@@ -347,7 +347,7 @@ describe("Cross-phase integration", () => {
         });
         await simulateRequest(ctx.app, "POST", `/tasks/${tid}/deliver`, {
           headers: { "X-API-Key": "sk" },
-          body: { output_path: `/tmp/out-${i}.txt` },
+          body: { output_path: `/tmp/tachi/out-${i}.txt` },
         });
         await simulateRequest(ctx.app, "POST", `/tasks/${tid}/approve`, {
           headers: { "X-API-Key": "bk" },
@@ -388,7 +388,7 @@ describe("Cross-phase integration", () => {
       await simulateRequest(ctx.app, "POST", `/tasks/${tid}/accept`, { headers: { "X-API-Key": "sk" } });
       await simulateRequest(ctx.app, "POST", `/tasks/${tid}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/out.txt" },
+        body: { output_path: "/tmp/tachi/out.txt" },
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${tid}/approve`, { headers: { "X-API-Key": "bk" } });
 
@@ -425,14 +425,14 @@ describe("Cross-phase integration", () => {
       // Outsider cannot deliver
       const deliverRes = await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "ok" },
-        body: { output_path: "/tmp/evil.txt" },
+        body: { output_path: "/tmp/tachi/evil.txt" },
       });
       expect(deliverRes.statusCode).toBe(403);
 
       // Legitimate deliver
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/legit.txt" },
+        body: { output_path: "/tmp/tachi/legit.txt" },
       });
 
       // Outsider cannot approve
@@ -457,7 +457,7 @@ describe("Cross-phase integration", () => {
       // Suspended seller cannot deliver
       const deliverRes = await simulateRequest(ctx.app, "POST", "/tasks/some-task/deliver", {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/output.txt" },
+        body: { output_path: "/tmp/tachi/output.txt" },
       });
       expect(deliverRes.statusCode).toBe(403);
       expect(deliverRes.body.error).toMatch(/not active/);
@@ -499,7 +499,7 @@ describe("Cross-phase integration", () => {
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${postRes.body.id}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/out.txt" },
+        body: { output_path: "/tmp/tachi/out.txt" },
       });
 
       const rejectRes = await simulateRequest(ctx.app, "POST", `/tasks/${postRes.body.id}/reject`, {
@@ -525,7 +525,7 @@ describe("Cross-phase integration", () => {
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/accept`, { headers: { "X-API-Key": "sk" } });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/deliver`, {
         headers: { "X-API-Key": "sk" },
-        body: { output_path: "/tmp/out.txt" },
+        body: { output_path: "/tmp/tachi/out.txt" },
       });
       await simulateRequest(ctx.app, "POST", `/tasks/${taskId}/approve`, { headers: { "X-API-Key": "bk" } });
 
