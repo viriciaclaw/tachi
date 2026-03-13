@@ -1,6 +1,9 @@
 const { v4: uuidv4 } = require("uuid");
 
 const { findBestMatch } = require("../../lib/matching");
+const { maskPii } = require("../../lib/pii-masker");
+const { scrubEnv } = require("../../lib/env-scrubber");
+const { detectInjection } = require("../../lib/injection-guard");
 
 const DEFAULT_REVIEW_WINDOW_MS = 7_200_000;
 const NEW_AGENT_TASK_CAP = 10;
@@ -176,6 +179,23 @@ function createTasksHandlers(db) {
     LIMIT 1
   `);
 
+  const findExistingReview = db.prepare(
+    "SELECT id FROM reviews WHERE task_id = ? AND reviewer_id = ? LIMIT 1"
+  );
+
+  const insertReview = db.prepare(`
+    INSERT INTO reviews (id, task_id, reviewer_id, reviewee_id, rating, comment, role, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const getAgentRating = db.prepare(
+    "SELECT rating_avg, rating_count FROM agents WHERE id = ? LIMIT 1"
+  );
+
+  const updateAgentRating = db.prepare(
+    "UPDATE agents SET rating_avg = ?, rating_count = ? WHERE id = ?"
+  );
+
   const acceptTask = db.transaction((taskId, sellerId, agreedPrice, acceptedAt) => {
     const task = findTaskById.get(taskId);
 
@@ -243,6 +263,29 @@ function createTasksHandlers(db) {
     return findTaskById.get(task.id);
   });
 
+  const createReviewAndUpdateRating = db.transaction((review) => {
+    insertReview.run(
+      review.id,
+      review.task_id,
+      review.reviewer_id,
+      review.reviewee_id,
+      review.rating,
+      review.comment,
+      review.role,
+      review.created_at,
+    );
+
+    const currentRating = getAgentRating.get(review.reviewee_id) || { rating_avg: 0, rating_count: 0 };
+    const oldAvg = Number(currentRating.rating_avg || 0);
+    const oldCount = Number(currentRating.rating_count || 0);
+    const newCount = oldCount + 1;
+    const newAvg = Number((((oldAvg * oldCount) + review.rating) / newCount).toFixed(2));
+
+    updateAgentRating.run(newAvg, newCount, review.reviewee_id);
+
+    return { avg: newAvg, count: newCount };
+  });
+
   function postTask(req, res) {
     const body = req.body ?? {};
     const capability = typeof body.capability === "string" ? body.capability.trim() : "";
@@ -283,6 +326,20 @@ function createTasksHandlers(db) {
       });
     }
 
+    const descriptionText = typeof body.description === "string" ? body.description : "";
+    const specInjectionResult = detectInjection(spec);
+    const descriptionInjectionResult = detectInjection(descriptionText);
+    const injectionFlags = [...specInjectionResult.threats, ...descriptionInjectionResult.threats];
+
+    if (parseBoolean(body.pii_mask, true)) {
+      const maskedSpec = scrubEnv(maskPii(spec).masked).scrubbed;
+      body.spec = maskedSpec;
+
+      if (typeof body.description === "string") {
+        body.description = scrubEnv(maskPii(body.description).masked).scrubbed;
+      }
+    }
+
     const createdAt = new Date().toISOString();
     const taskId = uuidv4();
     const task = createTaskRow(taskId, req.agent.id, body, createdAt);
@@ -295,6 +352,7 @@ function createTasksHandlers(db) {
     return res.status(201).json({
       ...savedTask,
       matched_agent_id: matchedAgent ? matchedAgent.id : null,
+      ...(injectionFlags.length > 0 ? { injection_flags: injectionFlags } : {}),
     });
   }
 
@@ -465,6 +523,63 @@ function createTasksHandlers(db) {
     return res.status(200).json(normalizeTask(task));
   }
 
+  function rateTask(req, res) {
+    const taskId = getTaskIdParam(req);
+    const rating = req.body?.rating;
+    const comment = req.body?.comment === undefined ? null : req.body?.comment;
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Field 'rating' must be an integer between 1 and 5" });
+    }
+
+    if (comment !== null && typeof comment !== "string") {
+      return res.status(400).json({ error: "Field 'comment' must be a string" });
+    }
+
+    const task = findTaskById.get(taskId);
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    if (task.status !== "approved") {
+      return res.status(409).json({ error: "Task must be approved before rating" });
+    }
+
+    const isBuyer = task.buyer_id === req.agent.id;
+    const isSeller = task.seller_id === req.agent.id;
+
+    if (!isBuyer && !isSeller) {
+      return res.status(403).json({ error: "Only task participants can rate" });
+    }
+
+    const existingReview = findExistingReview.get(task.id, req.agent.id);
+    if (existingReview) {
+      return res.status(409).json({ error: "You have already rated this task" });
+    }
+
+    const role = isBuyer ? "buyer" : "seller";
+    const revieweeId = isBuyer ? task.seller_id : task.buyer_id;
+    const createdAt = new Date().toISOString();
+    const review = {
+      id: uuidv4(),
+      task_id: task.id,
+      reviewer_id: req.agent.id,
+      reviewee_id: revieweeId,
+      rating,
+      comment: comment === null ? null : comment,
+      role,
+      created_at: createdAt,
+    };
+
+    const revieweeRating = createReviewAndUpdateRating(review);
+
+    return res.status(201).json({
+      ...review,
+      reviewee_rating: revieweeRating,
+    });
+  }
+
   return {
     postTask,
     findTasks,
@@ -474,6 +589,7 @@ function createTasksHandlers(db) {
     deliverTask,
     getTaskDetail,
     rejectTask,
+    rateTask,
   };
 }
 

@@ -12,6 +12,7 @@ const pkg = require("../package.json");
 const { ensureConfig } = require("../lib/config");
 const { PID_PATH } = require("../lib/paths");
 const { startServer } = require("../server");
+const { createRateCommand } = require("./commands/rate");
 const { registerCommand } = require("./commands/register");
 const { callCommand } = require("./commands/call");
 const {
@@ -93,7 +94,7 @@ function installCommonCommands(program) {
   program.command("status <id>").description("Show task status").action(taskStatusCommand);
   program.command("agents").description("List agent profiles").action(comingSoon("agents"));
   program.command("agent <id>").description("Show a single agent profile").action(comingSoon("agent"));
-  program.command("rate <task-id>").description("Rate an agent after task completion").action(comingSoon("rate"));
+  program.addCommand(createRateCommand());
 
   const wallet = program.command("wallet").description("Wallet operations");
   wallet.command("balance").description("Show wallet balance").action(walletBalanceCommand);

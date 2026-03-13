@@ -74,7 +74,7 @@ function createApp(db) {
   app.get("/tasks/:id", tasksHandlers.getTaskDetail);
   app.post("/tasks/:id/approve", tasksHandlers.approveTask);
   app.post("/tasks/:id/reject", tasksHandlers.rejectTask);
-  app.post("/tasks/:id/rate", notImplemented("POST /tasks/:id/rate"));
+  app.post("/tasks/:id/rate", tasksHandlers.rateTask);
   app.get("/wallet/balance", createWalletBalanceHandler(db));
   app.post("/wallet/topup", createWalletTopupHandler(db));
   app.get("/wallet/history", notImplemented("GET /wallet/history"));
