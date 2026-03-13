@@ -40,7 +40,7 @@ function comingSoon(commandName) {
 function installCommonCommands(program) {
   program
     .command("register")
-    .description("Register an agent profile")
+    .description("Register a new agent profile and save its API key locally")
     .requiredOption("--name <name>", "Agent name")
     .requiredOption("--capabilities <caps>", "Comma-separated capabilities")
     .option("--rate-min <min>", "Minimum rate", "0")
@@ -49,7 +49,7 @@ function installCommonCommands(program) {
     .action(registerCommand);
   program
     .command("post")
-    .description("Post a new task to the marketplace")
+    .description("Post a new task and place the buyer escrow hold")
     .option("--capability <cap>", "Required specialist capability")
     .option("--spec <spec>", "Acceptance criteria for the task")
     .option("--budget <amount>", "Maximum budget for the task")
@@ -61,18 +61,18 @@ function installCommonCommands(program) {
     .action(postTaskCommand);
   program
     .command("find")
-    .description("Browse open tasks")
+    .description("Browse marketplace tasks by status and capability")
     .option("--capability <cap>", "Filter by capability")
     .option("--status <status>", "Filter by status", "open")
     .action(findTasksCommand);
-  program.command("accept <id>").description("Accept a task").action(acceptTaskCommand);
-  program.command("deliver <id>").description("Deliver work for a task").requiredOption("--output <path>", "Path to the output artifact").action(deliverTaskCommand);
-  program.command("review <id>").description("Request or submit a revision review").action(comingSoon("review"));
-  program.command("approve <id>").description("Approve a delivered task").action(approveTaskCommand);
-  program.command("reject <id>").description("Reject a delivered task").requiredOption("--reason <text>", "Reason for rejection").action(rejectTaskCommand);
+  program.command("accept <id>").description("Accept a matched or open task as the specialist").action(acceptTaskCommand);
+  program.command("deliver <id>").description("Deliver an output artifact for a task").requiredOption("--output <path>", "Path to the output artifact").action(deliverTaskCommand);
+  program.command("review <id>").description("Request or submit revision review work").action(comingSoon("review"));
+  program.command("approve <id>").description("Approve a delivery and release escrow").action(approveTaskCommand);
+  program.command("reject <id>").description("Reject a delivery and request revision or escalate to dispute").requiredOption("--reason <text>", "Reason for rejection").action(rejectTaskCommand);
   program
     .command("call <capability>")
-    .description("Post task, wait for specialist, get delivery — all in one")
+    .description("Post a task, wait for a specialist, and optionally auto-approve")
     .requiredOption("--spec <spec>", "Acceptance criteria")
     .requiredOption("--budget <amount>", "Maximum budget")
     .option("--timeout <ms>", "Max wait for specialist accept (ms)", "60000")
@@ -85,23 +85,23 @@ function installCommonCommands(program) {
     .action(callCommand);
   program
     .command("watch")
-    .description("Watch marketplace for open tasks + auto-release timer")
+    .description("Watch marketplace tasks and optionally auto-accept or auto-release")
     .option("--capability <cap>", "Filter by capability")
     .option("--auto-accept", "Auto-accept matching tasks", false)
     .option("--no-auto-release", "Disable auto-release timer")
     .option("--poll-interval <ms>", "Marketplace poll interval (ms)", "5000")
     .option("--release-check-interval <ms>", "Release check interval (ms)", "1000")
     .action(watchCommand);
-  program.command("history").description("Show task history").action(taskHistoryCommand);
-  program.command("status <id>").description("Show task status").action(taskStatusCommand);
-  program.command("agents").description("List agent profiles").action(listAgentsCommand);
-  program.command("agent <id>").description("Show a single agent profile").action(getAgentCommand);
+  program.command("history").description("Show task history for the current agent").action(taskHistoryCommand);
+  program.command("status <id>").description("Show full status for a single task").action(taskStatusCommand);
+  program.command("agents").description("List public agent profiles").action(listAgentsCommand);
+  program.command("agent <id>").description("Show one public agent profile and its reviews").action(getAgentCommand);
   program.addCommand(createRateCommand());
 
-  const wallet = program.command("wallet").description("Wallet operations");
-  wallet.command("balance").description("Show wallet balance").action(walletBalanceCommand);
-  wallet.command("topup <amount>").description("Add funds to the wallet").action(walletTopupCommand);
-  wallet.command("history").description("Show wallet transaction history").action(walletHistoryCommand);
+  const wallet = program.command("wallet").description("Inspect and fund the current agent wallet");
+  wallet.command("balance").description("Show the current wallet balance").action(walletBalanceCommand);
+  wallet.command("topup <amount>").description("Add funds to the current wallet").action(walletTopupCommand);
+  wallet.command("history").description("Show wallet transactions involving the current agent").action(walletHistoryCommand);
 }
 
 function createProgram() {
@@ -111,7 +111,7 @@ function createProgram() {
 
   program
     .name("tachi")
-    .description("Hire specialist AI agents from the command line.")
+    .description("Local CLI marketplace for AI agents to hire and complete specialist work.")
     .version(pkg.version);
 
   const server = program.command("server").description("Manage the local Tachi API server");
